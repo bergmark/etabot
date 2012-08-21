@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns      #-}
 
 module Main where
 
@@ -17,8 +18,10 @@ checkChans :: [B.ByteString]
 checkChans = ["#haskell","#snapframework"]
 sendChan :: B.ByteString
 sendChan = "#fay"
-ignoreSpeakers :: [B.ByteString]
-ignoreSpeakers = ["etabot"]
+ignoreSpeaker :: T.Text -> Bool
+ignoreSpeaker (T.toLower -> s) = s `elem` fixed || "bot" `T.isSuffixOf` s
+  where
+    fixed = ["preflex"]
 
 config :: IrcConfig
 config = defaultConfig
@@ -27,10 +30,9 @@ config = defaultConfig
     , cNick = botName
     , cUsername = botName
     , cRealname = botName
-    , cChannels = ["#fay-test1", "#fay-test2", "#fay-test3"]
+    , cChannels = ["#fay", "#snapframework", "#haskell"]
     , cEvents = [notifySnap]
     }
-
 
 onDecodeError :: a -> b -> Maybe c
 onDecodeError _ _ = Nothing
@@ -62,7 +64,7 @@ notifySnap = Privmsg $ \mirc imsg -> do
                     ]
             sendMsg mirc sendChan out
             putStrLn $ T.unpack $ decodeUtf8 out
-    when (chan `elem` checkChans && not (speaker `elem` ignoreSpeakers))
+    when (chan `elem` checkChans && not (ignoreSpeaker $ decodeUtf8With onDecodeError speaker))
           (checkNotify "fay")
 
 main :: IO ()
